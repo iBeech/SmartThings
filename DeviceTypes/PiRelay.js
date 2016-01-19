@@ -24,7 +24,7 @@ metadata {
 	definition (name: "Pi Relay Control", namespace: "ibeech.pirelaycontrol", author: "Tom Beech") {
 
 		capability "Switch"
-        capability "Refresh"
+        	capability "Refresh"
 		capability "Polling"
 	}
 
@@ -39,12 +39,12 @@ metadata {
 			state "off", label:'${name}', action:"switch.on", icon:"st.switches.switch.off", backgroundColor:"#ffffff"
 		}
                 
-        standardTile("refresh", "device.refresh", inactiveLabel: false, decoration: "flat", width: 1, height: 1) {
+        	standardTile("refresh", "device.refresh", inactiveLabel: false, decoration: "flat", width: 1, height: 1) {
 			state("default", label:'refresh', action:"polling.poll", icon:"st.secondary.refresh-icon")
 		}
 
 		main "switch"
-		details (["switch", "direction", "refresh"])
+		details (["switch", "refresh"])
 	}
 }
 
@@ -52,9 +52,9 @@ metadata {
 def parse(String description) {
 	//log.debug "Parsing '${description}'"
 	def msg = parseLanMessage(description)
-    log.info "Return data: " + msg.header
+	log.info "Return data: " + msg.header
     
-    def response = msg.body;
+    	def response = msg.body;
     
     // The GPIO direction was set
     if(response == "IN" || response == "OUT"){
@@ -77,12 +77,8 @@ def parse(String description) {
 def poll() {
 	log.debug "Executing 'poll'"   
         
-    storeNetworkDeviceId()
-	//if(data.pinDirectionSet == null){
-	//	setPinFunction()
-    //} else {
-    	updateGpioState()
-    //}
+	storeNetworkDeviceId()
+	updateGpioState()
 }
 
 def refresh() {
@@ -94,13 +90,13 @@ def refresh() {
 def on() {
 	log.debug "Executing 'on'"	     
     
-    setDeviceState('on')   
+	setDeviceState('on')   
 }
 
 def off() {
 	log.debug "Executing 'off'"
 	    
-    setDeviceState('off')    
+	setDeviceState('off')    
 }
 
 def setDeviceState(state) {
