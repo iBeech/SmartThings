@@ -58,34 +58,71 @@ def installed() {
   initialize()
 }
 
-def updated() {
-	log.debug "Updated with settings: ${settings}"
-       
-    unsubscribe()
-    uninstalled()
-    initialize();
-}
-
 def initialize() {
 
     subscribe(location, null, response, [filterEvents:false])    
    
-	setupVirtualRelay(gpioName1, gpio1);
-	setupVirtualRelay(gpioName2, gpio2);
- 	setupVirtualRelay(gpioName3, gpio3);
-	setupVirtualRelay(gpioName4, gpio4);
-	setupVirtualRelay(gpioName5, gpio5);
-	setupVirtualRelay(gpioName6, gpio6);
-	setupVirtualRelay(gpioName7, gpio7);
-	setupVirtualRelay(gpioName8, gpio8);
+	setupVirtualRelay("1", gpioName1, gpio1);
+	setupVirtualRelay("2", gpioName2, gpio2);
+ 	setupVirtualRelay("3", gpioName3, gpio3);
+	setupVirtualRelay("4", gpioName4, gpio4);
+	setupVirtualRelay("5", gpioName5, gpio5);
+	setupVirtualRelay("6", gpioName6, gpio6);
+	setupVirtualRelay("7", gpioName7, gpio7);
+	setupVirtualRelay("8", gpioName8, gpio8);
  
 }
 
-def setupVirtualRelay(gpioName, gpio){
+def updated() {
+	log.debug "Updated with settings: ${settings}"
+            
+    unsubscribe();
+	updateVirtualRelay(1, settings.gpioName1, settings.gpio1);
+    updateVirtualRelay(2, settings.gpioName2, settings.gpio2);
+    updateVirtualRelay(3, settings.gpioName3, settings.gpio3);
+    updateVirtualRelay(4, settings.gpioName4, settings.gpio4);
+    updateVirtualRelay(5, settings.gpioName5, settings.gpio5);
+    updateVirtualRelay(6, settings.gpioName6, settings.gpio6);
+    updateVirtualRelay(7, settings.gpioName7, settings.gpio7);
+    updateVirtualRelay(8, settings.gpioName8, settings.gpio8);       
+}
+
+def updateVirtualRelay(deviceId, gpioName, gpio){
+
+	def children = getChildDevices()
+    def theDeviceNetworkId = "piRelay." + deviceId;
+    
+  	def theSwitch = children.find{ d -> d.deviceNetworkId.startsWith(theDeviceNetworkId) }  
+    
+    if(theSwitch){ // The switch already exists
+    
+    	if(!gpioName){ // The user has not filled out data for this device
+    		log.debug "Found an existing device, but the user has chosen to delete this particular one"
+        	deleteChildDevice(theSwitch.deviceNetworkId);
+    	} else {
+        
+    		log.debug "Found existing switch which we will now update"   
+        	theSwitch.deviceNetworkId = theDeviceNetworkId + "." + gpio
+        	theSwitch.label = gpioName
+        	theSwitch.name = gpioName
+            subscribe(theSwitch, "switch", switchChange)
+        	log.debug "Setting initial state of $gpioName to off"
+        	setDeviceState(gpio, "off");
+	    	theSwitch.off();
+        }
+    } else { // The switch does not exist
+    	if(gpioName){ // The user filled in data about this switch
+    		log.debug "This switch does not exist, creating a new one now"
+        	setupVirtualRelay(deviceId, gpioName, gpio);
+       	}
+    }
+
+}
+def setupVirtualRelay(deviceId, gpioName, gpio){
 
 	if(gpio){
 	    log.debug "Create a Virtual Pi Relay named $gpioName"
-	    def d = addChildDevice("ibeech", "Virtual Pi Relay", "piRelay." + gpio, theHub.id, [label:gpioName, name:gpioName])
+	    def d = addChildDevice("ibeech", "Virtual Pi Relay", "piRelay." + deviceId + "." + gpio, theHub.id, [label:gpioName, name:gpioName])
 	    subscribe(d, "switch", switchChange)
 	    log.debug "Setting initial state of $gpioName to off"
         setDeviceState(gpio, "off");
@@ -116,13 +153,20 @@ def switchChange(evt){
 	log.debug evt.value;
     
     def parts = evt.value.tokenize('.');
-    def GPIO = parts[0];
-    def state = parts[1];
+    def deviceId = parts[1];
+    def GPIO = parts[2];
+    def state = parts[3];
     
     setDeviceState(GPIO, state);
     
+    return;
+    
+    // This code isnt really needed, but is useful to keep around for reference
     def children = getChildDevices()
-  	def theSwitch = children.find{ d -> d.deviceNetworkId == "piRelay." + GPIO }  
+    def theDeviceNetworkId = "piRelay." + deviceId + "." + GPIO;
+    log.debug theDeviceNetworkId;
+    
+  	def theSwitch = children.find{ d -> d.deviceNetworkId == theDeviceNetworkId }  
     log.debug "Got switch $theSwitch"
     
     switch(theSwitch){    
