@@ -33,22 +33,21 @@ preferences {
   }
   
     section("GPIO Setup") {
-	input "gpioName1", "text", title: "Relay 1 Name", required:true
-    input "gpio1", "number", title: "Relay 1 GPIO #", required:true
 	input "gpioName2", "text", title: "Relay 2 Name", required:false
-    input "gpio2", "number", title: "Relay 2 GPIO #", required:false
 	input "gpioName3", "text", title: "Relay 3 Name", required:false
-    input "gpio3", "number", title: "Relay 3 GPIO #", required:false
 	input "gpioName4", "text", title: "Relay 4 Name", required:false
-    input "gpio4", "number", title: "Relay 4 GPIO #", required:false
-	input "gpioName5", "text", title: "Relay 5 Name", required:false
-    input "gpio5", "number", title: "Relay 5 GPIO #", required:false
-	input "gpioName6", "text", title: "Relay 6 Name", required:false
-    input "gpio6", "number", title: "Relay 6 GPIO #", required:false
 	input "gpioName7", "text", title: "Relay 7 Name", required:false
-    input "gpio7", "number", title: "Relay 7 GPIO #", required:false
 	input "gpioName8", "text", title: "Relay 8 Name", required:false
-    input "gpio8", "number", title: "Relay 8 GPIO #", required:false
+	input "gpioName9", "text", title: "Relay 9 Name", required:false
+	input "gpioName10", "text", title: "Relay 10 Name", required:false
+    input "gpioName11", "text", title: "Relay 11 Name", required:false
+    input "gpioName17", "text", title: "Relay 17 Name", required:false
+    input "gpioName18", "text", title: "Relay 18 Name", required:false
+    input "gpioName22", "text", title: "Relay 22 Name", required:false
+    input "gpioName23", "text", title: "Relay 23 Name", required:false
+    input "gpioName24", "text", title: "Relay 24 Name", required:false
+    input "gpioName25", "text", title: "Relay 25 Name", required:false
+    input "gpioName27", "text", title: "Relay 27 Name", required:false
   }
 }
 
@@ -62,14 +61,21 @@ def initialize() {
 
     subscribe(location, null, response, [filterEvents:false])    
    
-	setupVirtualRelay("1", gpioName1, gpio1);
-	setupVirtualRelay("2", gpioName2, gpio2);
- 	setupVirtualRelay("3", gpioName3, gpio3);
-	setupVirtualRelay("4", gpioName4, gpio4);
-	setupVirtualRelay("5", gpioName5, gpio5);
-	setupVirtualRelay("6", gpioName6, gpio6);
-	setupVirtualRelay("7", gpioName7, gpio7);
-	setupVirtualRelay("8", gpioName8, gpio8);
+	setupVirtualRelay("2", gpioName2);
+	setupVirtualRelay("3", gpioName3);
+ 	setupVirtualRelay("4", gpioName4);
+	setupVirtualRelay("7", gpioName7);
+	setupVirtualRelay("8", gpioName8);
+	setupVirtualRelay("9", gpioName9);
+	setupVirtualRelay("10", gpioName10);
+	setupVirtualRelay("11", gpioName11);
+	setupVirtualRelay("17", gpioName17);
+	setupVirtualRelay("18", gpioName18);
+	setupVirtualRelay("22", gpioName22);
+	setupVirtualRelay("23", gpioName23);
+	setupVirtualRelay("24", gpioName24);
+	setupVirtualRelay("25", gpioName25);
+	setupVirtualRelay("27", gpioName27);
  
 }
 
@@ -77,17 +83,24 @@ def updated() {
 	log.debug "Updated with settings: ${settings}"
             
     unsubscribe();
-	updateVirtualRelay(1, settings.gpioName1, settings.gpio1);
-    updateVirtualRelay(2, settings.gpioName2, settings.gpio2);
-    updateVirtualRelay(3, settings.gpioName3, settings.gpio3);
-    updateVirtualRelay(4, settings.gpioName4, settings.gpio4);
-    updateVirtualRelay(5, settings.gpioName5, settings.gpio5);
-    updateVirtualRelay(6, settings.gpioName6, settings.gpio6);
-    updateVirtualRelay(7, settings.gpioName7, settings.gpio7);
-    updateVirtualRelay(8, settings.gpioName8, settings.gpio8);       
+	updateVirtualRelay("2", gpioName2);
+	updateVirtualRelay("3", gpioName3);
+ 	updateVirtualRelay("4", gpioName4);
+	updateVirtualRelay("7", gpioName7);
+	updateVirtualRelay("8", gpioName8);
+	updateVirtualRelay("9", gpioName9);
+	updateVirtualRelay("10", gpioName10);
+	updateVirtualRelay("11", gpioName11);
+	updateVirtualRelay("17", gpioName17);
+	updateVirtualRelay("18", gpioName18);
+	updateVirtualRelay("22", gpioName22);
+	updateVirtualRelay("23", gpioName23);
+	updateVirtualRelay("24", gpioName24);
+	updateVirtualRelay("25", gpioName25);
+	updateVirtualRelay("27", gpioName27);
 }
 
-def updateVirtualRelay(deviceId, gpioName, gpio){
+def updateVirtualRelay(deviceId, gpioName){
 
 	def children = getChildDevices()
     def theDeviceNetworkId = "piRelay." + deviceId;
@@ -102,30 +115,30 @@ def updateVirtualRelay(deviceId, gpioName, gpio){
     	} else {
         
     		log.debug "Found existing switch which we will now update"   
-        	theSwitch.deviceNetworkId = theDeviceNetworkId + "." + gpio
+        	theSwitch.deviceNetworkId = theDeviceNetworkId + "." + deviceId
         	theSwitch.label = gpioName
         	theSwitch.name = gpioName
             subscribe(theSwitch, "switch", switchChange)
         	log.debug "Setting initial state of $gpioName to off"
-        	setDeviceState(gpio, "off");
+        	setDeviceState(deviceId, "off");
 	    	theSwitch.off();
         }
     } else { // The switch does not exist
     	if(gpioName){ // The user filled in data about this switch
     		log.debug "This switch does not exist, creating a new one now"
-        	setupVirtualRelay(deviceId, gpioName, gpio);
+        	setupVirtualRelay(deviceId, gpioName);
        	}
     }
 
 }
-def setupVirtualRelay(deviceId, gpioName, gpio){
+def setupVirtualRelay(deviceId, gpioName){
 
-	if(gpio){
+	if(gpioName){
 	    log.debug "Create a Virtual Pi Relay named $gpioName"
-	    def d = addChildDevice("ibeech", "Virtual Pi Relay", "piRelay." + deviceId + "." + gpio, theHub.id, [label:gpioName, name:gpioName])
+	    def d = addChildDevice("ibeech", "Virtual Pi Relay", "piRelay." + deviceId + "." + deviceId, theHub.id, [label:gpioName, name:gpioName])
 	    subscribe(d, "switch", switchChange)
 	    log.debug "Setting initial state of $gpioName to off"
-        setDeviceState(gpio, "off");
+        setDeviceState(deviceId, "off");
 	    d.off();
         log.debug "Virtual Pi Relay $gpioName created"
 	}
