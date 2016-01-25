@@ -98,12 +98,14 @@ def updated() {
 	updateVirtualRelay("24", gpioName24);
 	updateVirtualRelay("25", gpioName25);
 	updateVirtualRelay("27", gpioName27);
+    
+    subscribe(location, null, response, [filterEvents:false])    
 }
 
 def updateVirtualRelay(deviceId, gpioName){
 
 	def children = getChildDevices()
-    def theDeviceNetworkId = "piRelay." + deviceId;
+    def theDeviceNetworkId = "piRelay." + settings.piIP;
     
   	def theSwitch = children.find{ d -> d.deviceNetworkId.startsWith(theDeviceNetworkId) }  
     
@@ -135,7 +137,7 @@ def setupVirtualRelay(deviceId, gpioName){
 
 	if(gpioName){
 	    log.debug "Create a Virtual Pi Relay named $gpioName"
-	    def d = addChildDevice("ibeech", "Virtual Pi Relay", "piRelay." + deviceId + "." + deviceId, theHub.id, [label:gpioName, name:gpioName])
+	    def d = addChildDevice("ibeech", "Virtual Pi Relay", "piRelay." + settings.piIP + "." + deviceId, theHub.id, [label:gpioName, name:gpioName])
 	    subscribe(d, "switch", switchChange)
 	    log.debug "Setting initial state of $gpioName to off"
         setDeviceState(deviceId, "off");
@@ -153,6 +155,7 @@ def uninstalled() {
 }
 
 def response(evt){
+	log.debug "WOOT"
 	log.debug evt
     log.debug evt.value
 }
@@ -160,15 +163,24 @@ def response(evt){
 def switchChange(evt){
 
 	log.debug "Switch event!";
-    
-    if(evt.value == "on" || evt.value == "off") return;
-    
-	log.debug evt.value;
+    log.debug evt.value;
+    if(evt.value == "on" || evt.value == "off") return;    
+	
     
     def parts = evt.value.tokenize('.');
     def deviceId = parts[1];
-    def GPIO = parts[2];
-    def state = parts[3];
+    def GPIO = parts[5];
+    def state = parts[6];
+    
+    log.debug state;
+    
+    switch(state){
+    	case "refresh":
+        // Refresh this switches button
+        log.debug "Refreshing the state of GPIO " + GPIO
+        executeRequest("/*", "GET", false, null)
+        return;        
+    }
     
     setDeviceState(GPIO, state);
     
