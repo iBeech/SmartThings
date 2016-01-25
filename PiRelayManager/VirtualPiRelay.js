@@ -43,15 +43,13 @@ def parse(String description) {
 def on() {
 	log.debug "Executing 'on'"	     
     
-    def gpio = device.deviceNetworkId.tokenize('.')[1];
-    sendEvent(name: "switch", value: gpio + ".on");   
+    sendEvent(name: "switch", value: device.deviceNetworkId + ".on");    
     sendEvent(name: "switch", value: "on");
 }
 
 def off() {
 	log.debug "Executing 'off'"
 	    
-    def gpio = device.deviceNetworkId.tokenize('.')[1];
-    sendEvent(name: "switch", value: gpio + ".off");    
+	sendEvent(name: "switch", value: device.deviceNetworkId + ".off");     
     sendEvent(name: "switch", value: "off");
 }
