@@ -1,5 +1,5 @@
 /**
- *  Pi Relay Control
+ *  Plex Home Theatre
  *
  *  Copyright 2016 Tom Beech
  *
