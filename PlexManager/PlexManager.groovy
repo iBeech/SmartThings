@@ -45,9 +45,7 @@ def initialize() {
 
     subscribe(location, null, response, [filterEvents:false])    
    	getAuthenticationToken();
-    
-    regularClientScan();
-    
+        
     state.poll = true;
     regularPolling();
 }
@@ -57,14 +55,14 @@ def updated() {
     
     state.authenticationToken = null;
     state.tokenUserName = null;
+    state.poll = false;
+    
     getAuthenticationToken();
     
-    unsubscribe(); 
-    
-    getClients();    	
-    
-    
-    subscribe(location, null, response, [filterEvents:false])    
+    if(!state.poll){
+    	state.poll = true;
+    	regularPolling();
+    } 
 }
 
 def uninstalled() {
@@ -82,8 +80,8 @@ def uninstalled() {
 def response(evt) {	 
     
     def msg = parseLanMessage(evt.description);
-    if(msg && msg.body){
-    
+    if(msg && msg.body && msg.body.startsWith("<?xml")){
+    	
     	def statusrsp = new XmlSlurper().parseText(msg.body)
         
         log.debug "Parsing /clients"
@@ -140,14 +138,6 @@ def updatePHT(phtName, phtIP){
 		def d = addChildDevice("ibeech", "Plex Home Theatre", childDeviceID(phtIP), theHub.id, [label:phtName, name:phtName])
 		subscribe(d, "switch", switchChange)
 
-    } else { // The PHT already exists, update it
-
-        log.debug "Found existing switch which we will now update"   
-        pht.deviceNetworkId = childDeviceID(phtIP)
-        pht.label = phtName
-        pht.name = phtName
-
-        subscribe(pht, "switch", switchChange)    	
     }
 }
 
@@ -186,18 +176,11 @@ def regularPolling() {
     
     log.debug "Polling for PHT state"
     
-    if(state.authenticationToken()) {
-    	updateClientStatus()
+    if(state.authenticationToken) {
+        updateClientStatus();
     }
     
-    runIn(7, regularPolling);
-}
-
-def regularClientScan() {
-	
-    getClients();
-    
-    runIn(60, regularClientScan);
+    runIn(10, regularPolling);
 }
 
 def getClients() {
