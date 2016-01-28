@@ -1,5 +1,5 @@
 /**
- *  Plex Home Theatre
+ *  Pi Relay Control
  *
  *  Copyright 2016 Tom Beech
  *
@@ -75,14 +75,17 @@ def setPlaybackState(state) {
 
     switch(state) {
         case "stopped":
+        sendEvent(name: "switch", value: "off");
         sendEvent(name: "status", value: "stopped");
         break;
 
         case "playing":
+        sendEvent(name: "switch", value: "on");
         sendEvent(name: "status", value: "playing");
         break;
 
         case "paused":
+        sendEvent(name: "switch", value: "off");
         sendEvent(name: "status", value: "paused");
     }
 }
