@@ -58,13 +58,11 @@ def updated() {
     state.authenticationToken = null;
     state.tokenUserName = null;
     getAuthenticationToken();
-    state.poll = false;
+    
     unsubscribe(); 
     
     getClients();    	
     
-    state.poll = true;
-    regularPolling();
     
     subscribe(location, null, response, [filterEvents:false])    
 }
@@ -190,7 +188,7 @@ def regularPolling() {
     
     updateClientStatus()
     
-    runIn(5, regularPolling);
+    runIn(7, regularPolling);
 }
 
 def getClients() {
