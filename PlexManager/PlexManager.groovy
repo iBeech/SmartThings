@@ -79,7 +79,7 @@ def uninstalled() {
 	}   
 }
 
-def response(evt){	 
+def response(evt) {	 
     
     def msg = parseLanMessage(evt.description);
     if(msg && msg.body){
@@ -186,7 +186,9 @@ def regularPolling() {
     
     log.debug "Polling for PHT state"
     
-    updateClientStatus()
+    if(state.authenticationToken()) {
+    	updateClientStatus()
+    }
     
     runIn(7, regularPolling);
 }
