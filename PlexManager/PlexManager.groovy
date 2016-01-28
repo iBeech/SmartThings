@@ -46,7 +46,7 @@ def initialize() {
     subscribe(location, null, response, [filterEvents:false])    
    	getAuthenticationToken();
     
-    getClients();   
+    regularClientScan();
     
     state.poll = true;
     regularPolling();
@@ -191,6 +191,13 @@ def regularPolling() {
     }
     
     runIn(7, regularPolling);
+}
+
+def regularClientScan() {
+	
+    getClients();
+    
+    runIn(60, regularClientScan);
 }
 
 def getClients() {
