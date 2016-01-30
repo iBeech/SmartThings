@@ -84,9 +84,7 @@ def response(evt) {
     if(msg && msg.body && msg.body.startsWith("<?xml")){
     	
     	def statusrsp = new XmlSlurper().parseText(msg.body)
-        
-        log.trace msg.body
-        
+                
         log.debug "Parsing /clients"
         statusrsp.Server.each { thing ->        	
             log.trace thing.@name.text()
