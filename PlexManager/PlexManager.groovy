@@ -45,7 +45,7 @@ def initialize() {
 
     subscribe(location, null, response, [filterEvents:false])    
    	getAuthenticationToken();
-        
+    getClients();   
     state.poll = true;
     regularPolling();
 }
@@ -58,6 +58,7 @@ def updated() {
     state.poll = false;
     
     getAuthenticationToken();
+    getClients();
     
     if(!state.poll){
     	state.poll = true;
@@ -84,8 +85,10 @@ def response(evt) {
     	
     	def statusrsp = new XmlSlurper().parseText(msg.body)
         
+        log.trace msg.body
+        
         log.debug "Parsing /clients"
-        statusrsp.Server.each { thing ->
+        statusrsp.Server.each { thing ->        	
             log.trace thing.@name.text()
             log.trace thing.@address.text()            
 
@@ -102,17 +105,22 @@ def response(evt) {
             def currentPlayback = statusrsp.Video.find { d -> d.Player.@address.text() == address }
             
             // If there is no content playing on this device, then the state is stopped
-            def state = "stopped";            
+            def playbackState = "stopped";            
             
             // If we found active content on this device, look up its current state (i.e. playing or paused)
             if(currentPlayback) {
                         	
-            	state = currentPlayback.Player.@state.text();
+            	playbackState = currentPlayback.Player.@state.text();
             }            
                         
-            log.trace "Determined that PHT " + address + " playback state is: " + state
+            log.trace "Determined that PHT " + address + " playback state is: " + playbackState
+                        
+            pht.setPlaybackState(playbackState);
+            pht.setPlaybackTitle(currentPlayback.@grandparentTitle.text() + ": " + currentPlayback.@title.text());
             
-            pht.setPlaybackState(state);
+            def iconUrl = "http://" + settings.plexServerIP + ":32400" + currentPlayback.@thumb + "?X-Plex-Token=" + state.authenticationToken
+            log.debug iconUrl;
+            pht.setPlaybackIcon(iconUrl);
          }
             
 	}
@@ -135,10 +143,11 @@ def updatePHT(phtName, phtIP){
     if(!pht){ // The PHT does not exist, create it
 
         log.debug "This PHT does not exist, creating a new one now"
-		def d = addChildDevice("ibeech", "Plex Home Theatre", childDeviceID(phtIP), theHub.id, [label:phtName, name:phtName])
-		subscribe(d, "switch", switchChange)
-
+		pht = addChildDevice("ibeech", "Plex Home Theatre", childDeviceID(phtIP), theHub.id, [label:phtName, name:phtName])		
     }
+    
+    // Renew the subscription
+    subscribe(pht, "switch", switchChange)
 }
 
 def String childDeviceID(phtIP) {
@@ -146,12 +155,12 @@ def String childDeviceID(phtIP) {
 	return "pht." + settings.plexServerIP + "." + phtIP
 }
 
-def switchChange(evt){
-
-	log.debug "Play/Pause event received: " + evt.value;
+def switchChange(evt) {
     
     // We are only interested in event data which contains 
-    if(evt.value == "on" || evt.value == "off") return;    	
+    if(evt.value == "on" || evt.value == "off") return;   
+    
+	log.debug "Plex Home Theatre event received: " + evt.value;
     
     def parts = evt.value.tokenize('.');
     
@@ -161,13 +170,42 @@ def switchChange(evt){
     // Parse out the new switch state from the event data
     def state = parts[9]
     
-    log.debug "phtIP: " + phtIP
+    //log.debug "phtIP: " + phtIP
     log.debug "state: " + state
     
-    // Toggle the play / pause button for this PHT
-    playpause(phtIP);
+    switch(state) {
+    	case "next":
+        	log.debug "Sending command 'next' to " + phtIP
+            next(phtIP);
+        break;
+        
+        case "previous":
+        	log.debug "Sending command 'previous' to " + phtIP
+            previous(phtIP);
+        break;
+        
+        case "play":
+        case "pause":
+        case "stop":
+            // Toggle the play / pause button for this PHT
+    		playpause(phtIP);
+        break;
+        
+        case "scanNewClients":
+        	getClients();
+            
+        case "setVolume":
+        	setVolume(phtIP, parts[10]);
+        break;
+    }
     
     return;
+}
+
+def setVolume(phtIP, level) {
+	log.debug "Executing 'setVolume'"
+	
+	executeRequest("/system/players/" + phtIP + "/playback/setParameters?volume=" + level, "GET");
 }
 
 def regularPolling() { 
@@ -200,6 +238,18 @@ def playpause(phtIP) {
 	log.debug "Executing 'playpause'"
 	
 	executeRequest("/system/players/" + phtIP + "/playback/play", "GET");
+}
+
+def next(phtIP) {
+	log.debug "Executing 'next'"
+	
+	executeRequest("/system/players/" + phtIP + "/playback/skipNext", "GET");
+}
+
+def previous(phtIP) {
+	log.debug "Executing 'next'"
+	
+	executeRequest("/system/players/" + phtIP + "/playback/skipPrevious", "GET");
 }
 
 def executeRequest(Path, method) {
