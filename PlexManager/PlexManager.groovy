@@ -146,8 +146,10 @@ def updatePHT(phtName, phtIP, phtIdentifier){
 		pht = addChildDevice("ibeech", "Plex Home Theatre", child_deviceNetworkID, theHub.id, [label:phtName, name:phtName])		
     } else {
     	// Update the network device ID
-        log.trace "Updating this devices network ID, so that it is consistant"
-    	pht.deviceNetworkId = childDeviceID(phtIP, phtIdentifier);
+        if(pht.deviceNetworkId != child_deviceNetworkID) {
+        	log.trace "Updating this devices network ID, so that it is consistant"
+    		pht.deviceNetworkId = childDeviceID(phtIP, phtIdentifier);
+        }
     }
     
     // Renew the subscription
@@ -196,7 +198,7 @@ def switchChange(evt) {
     def command = getPHTCommand(evt.value);
     
     //log.debug "phtIP: " + phtIP
-    log.debug "state: " + state
+    log.debug "Command: " + command
     
     switch(command) {
     	case "next":
