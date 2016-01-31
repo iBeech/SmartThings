@@ -46,13 +46,14 @@ def initialize() {
     subscribe(location, null, response, [filterEvents:false])    
    	getAuthenticationToken();
     getClients();   
+    getClients();
     state.poll = true;
     regularPolling();
 }
 
 def updated() {
 	log.debug "Updated with settings: ${settings}"
-    
+
     state.authenticationToken = null;
     state.tokenUserName = null;
     state.poll = false;
