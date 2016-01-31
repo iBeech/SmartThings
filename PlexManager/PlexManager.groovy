@@ -83,24 +83,26 @@ def response(evt) {
     def msg = parseLanMessage(evt.description);
     if(msg && msg.body && msg.body.startsWith("<?xml")){
     	
-    	def statusrsp = new XmlSlurper().parseText(msg.body)
+    	def mediaContainer = new XmlSlurper().parseText(msg.body)
                 
         log.debug "Parsing /clients"
-        statusrsp.Server.each { thing ->        	
-            log.trace thing.@name.text()
-            log.trace thing.@address.text()            
+        mediaContainer.Server.each { thing ->        	
+            log.trace "Name: " + thing.@name.text()
+            log.trace "IP: " + thing.@address.text()
+            log.trace "Identifier: " + thing.@machineIdentifier.text()
 
-            updatePHT(thing.@name.text(), thing.@address.text())
+            updatePHT(thing.@name.text(), thing.@address.text(), thing.@machineIdentifier.text())
         }
         
         log.debug "Parsing /status/sessions"
         getChildDevices().each { pht ->
          
          	// Convert the devices full network id to just the IP address of the device
-        	def address = deviceNetworkId_ToPHTAddress(pht.deviceNetworkId);
+        	//def address = getPHTAddress(pht.deviceNetworkId);
+            def identifier = getPHTIdentifier(pht.deviceNetworkId);
             
             // Look at all the current content playing, and determine if anything is playing on this device
-            def currentPlayback = statusrsp.Video.find { d -> d.Player.@address.text() == address }
+            def currentPlayback = mediaContainer.Video.find { d -> d.Player.@machineIdentifier.text() == identifier }
             
             // If there is no content playing on this device, then the state is stopped
             def playbackState = "stopped";            
@@ -111,46 +113,70 @@ def response(evt) {
             	playbackState = currentPlayback.Player.@state.text();
             }            
                         
-            log.trace "Determined that PHT " + address + " playback state is: " + playbackState
+            log.trace "Determined that PHT " + identifier + " playback state is: " + playbackState
                         
             pht.setPlaybackState(playbackState);
-            pht.setPlaybackTitle(currentPlayback.@grandparentTitle.text() + ": " + currentPlayback.@title.text());
             
-            def iconUrl = "http://" + settings.plexServerIP + ":32400" + currentPlayback.@thumb + "?X-Plex-Token=" + state.authenticationToken
-            log.debug iconUrl;
-            pht.setPlaybackIcon(iconUrl);
+            switch(currentPlayback.@type.text()) {
+            	case "movie":
+                	pht.setPlaybackTitle(currentPlayback.@title.text());
+                	break;
+                    
+                default:
+                	pht.setPlaybackTitle(currentPlayback.@grandparentTitle.text() + ": " + currentPlayback.@title.text());
+            }
          }
             
 	}
 }
 
-def String deviceNetworkId_ToPHTAddress(id) {
+def updatePHT(phtName, phtIP, phtIdentifier){
 
-	def parts = id.tokenize('.');
-	return parts[5] + "." + parts[6] + "." + parts[7] + "." + parts[8];
-}
-
-def updatePHT(phtName, phtIP){
-
-	log.info "Updating PHT: " + phtName + " with IP: " + phtIP
+	log.info "Updating PHT: " + phtName + " with IP: " + phtIP + " and machine identifier: " + phtIdentifier
 
 	def children = getChildDevices()
+    def child_deviceNetworkID = childDeviceID(phtIP, phtIdentifier);
     
-  	def pht = children.find{ d -> d.deviceNetworkId == childDeviceID(phtIP) }  
+  	def pht = children.find{ d -> d.deviceNetworkId.contains(phtIP) }  
     
     if(!pht){ // The PHT does not exist, create it
 
         log.debug "This PHT does not exist, creating a new one now"
-		pht = addChildDevice("ibeech", "Plex Home Theatre", childDeviceID(phtIP), theHub.id, [label:phtName, name:phtName])		
+		pht = addChildDevice("ibeech", "Plex Home Theatre", child_deviceNetworkID, theHub.id, [label:phtName, name:phtName])		
+    } else {
+    	// Update the network device ID
+        log.trace "Updating this devices network ID, so that it is consistant"
+    	pht.deviceNetworkId = childDeviceID(phtIP, phtIdentifier);
     }
     
     // Renew the subscription
     subscribe(pht, "switch", switchChange)
 }
 
-def String childDeviceID(phtIP) {
+def String childDeviceID(phtIP, identifier) {
 
-	return "pht." + settings.plexServerIP + "." + phtIP
+	def id = "pht." + settings.plexServerIP + "." + phtIP + "." + identifier
+    return id;
+}
+def String getPHTAddress(deviceNetworkId) {
+
+	def parts = deviceNetworkId.tokenize('.');
+	return parts[5] + "." + parts[6] + "." + parts[7] + "." + parts[8];
+}
+def String getPHTIdentifier(deviceNetworkId) {
+
+	def parts = deviceNetworkId.tokenize('.');
+	return parts[9];
+}
+def String getPHTCommand(deviceNetworkId) {
+
+	def parts = deviceNetworkId.tokenize('.');
+	return parts[10];
+}
+def String getPHTAttribute(deviceNetworkId) {
+
+	def parts = deviceNetworkId.tokenize('.');
+	return parts[11];
 }
 
 def switchChange(evt) {
@@ -163,15 +189,15 @@ def switchChange(evt) {
     def parts = evt.value.tokenize('.');
     
     // Parse out the PHT IP address from the event data
-    def phtIP = deviceNetworkId_ToPHTAddress(evt.value);
+    def phtIP = getPHTAddress(evt.value);
     
     // Parse out the new switch state from the event data
-    def state = parts[9]
+    def command = getPHTCommand(evt.value);
     
     //log.debug "phtIP: " + phtIP
     log.debug "state: " + state
     
-    switch(state) {
+    switch(command) {
     	case "next":
         	log.debug "Sending command 'next' to " + phtIP
             next(phtIP);
@@ -193,7 +219,7 @@ def switchChange(evt) {
         	getClients();
             
         case "setVolume":
-        	setVolume(phtIP, parts[10]);
+        	setVolume(phtIP, parts[11]);
         break;
     }
     
