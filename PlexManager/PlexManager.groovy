@@ -310,7 +310,7 @@ def getAuthenticationToken() {
     log.debug "Getting authentication token for Plex Server " + settings.plexServerIP      
 
     def params = [
-    	uri: "https://plex.tv/users/sign_in.json?user%5Blogin%5D=" + settings.plexUserName + "&user%5Bpassword%5D=" + settings.plexPassword,
+    	uri: "https://plex.tv/users/sign_in.json?user%5Blogin%5D=" + settings.plexUserName + "&user%5Bpassword%5D=" + URLEncoder.encode(settings.plexPassword),
         headers: [
             'X-Plex-Client-Identifier': 'Plex',
 			'X-Plex-Product': 'Device',
