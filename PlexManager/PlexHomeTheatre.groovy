@@ -17,7 +17,7 @@
 metadata {
 	definition (name: "Plex Home Theatre", namespace: "ibeech", author: "ibeech") {
     	capability "Switch"
-		capability "Music Player"
+		capability "musicPlayer"
         
         command "scanNewClients"
         command "setPlaybackIcon", ["string"]
@@ -29,50 +29,48 @@ metadata {
 		// TODO: define status and reply messages here
 	}
 
-	tiles {    
+	tiles(scale: 2) {
         
-		standardTile("main", "device.status", width: 1, height: 1, canChangeIcon: true) {
-			state "playing", label:'Playing', action:"music Player.pause", icon:"st.Electronics.electronics16", nextState:"paused", backgroundColor:"#79b821"
-			state "stopped", label:'Stopped', action:"music Player.play", icon:"st.Electronics.electronics16", backgroundColor:"#ffffff"
-			state "paused", label:'Paused', action:"music Player.play", icon:"st.Electronics.electronics16", nextState:"playing", backgroundColor:"#FFA500"
-        }
-        
-        standardTile("next", "device.status", width: 1, height: 1, decoration: "flat") {
-			state "next", label:'', action:"music Player.nextTrack", icon:"st.sonos.next-btn", backgroundColor:"#ffffff"
-		}
-        
-        standardTile("previous", "device.status", width: 1, height: 1, decoration: "flat") {
-			state "previous", label:'', action:"music Player.previousTrack", icon:"st.sonos.previous-btn", backgroundColor:"#ffffff"
-		}	
-        
-        standardTile("scanNewClients", "device.status", width: 2, height: 1, decoration: "flat") {
-			state "default", label:'', action:"scanNewClients", icon:"state.icon", backgroundColor:"#ffffff"
-			state "grouped", label:'', action:"scanNewClients", icon:"state.icon", backgroundColor:"#ffffff"
-		}
-        
-        standardTile("fillerTile", "device.status", width: 1, height: 1, decoration: "flat") {
-			state "default", label:'', action:"", icon:"", backgroundColor:"#ffffff"
-			state "grouped", label:'', action:"", icon:"", backgroundColor:"#ffffff"
-		}
-        
-        standardTile("stop", "device.status", width: 1, height: 1, decoration: "flat") {
-			state "default", label:'', action:"music Player.stop", icon:"st.sonos.stop-btn", backgroundColor:"#ffffff"
-			state "grouped", label:'', action:"music Player.stop", icon:"st.sonos.stop-btn", backgroundColor:"#ffffff"
-		}
-        
-        	
-        valueTile("currentSong", "device.trackDescription", inactiveLabel: true, height:1, width:3, decoration: "flat") {
-            state "default", label:'${currentValue}', backgroundColor:"#ffffff"
-        }
-    
-        controlTile("levelSliderControl", "device.level", "slider", height: 1, width: 3, inactiveLabel: false) {
-            state "level", action:"setVolumeLevel", backgroundColor:"#ffffff"
-        }
-        
+        multiAttributeTile(name:"status", type: "generic", width: 6, height: 4, canChangeIcon: true){
+            tileAttribute ("device.status", key: "PRIMARY_CONTROL") {
+            attributeState "playing", label:'Playing', action:"music Player.pause", icon:"st.Electronics.electronics16", nextState:"paused", backgroundColor:"#79b821"
+            attributeState "stopped", label:'Stopped', action:"music Player.play", icon:"st.Electronics.electronics16", backgroundColor:"#ffffff"
+            attributeState "paused", label:'Paused', action:"music Player.play", icon:"st.Electronics.electronics16", nextState:"playing", backgroundColor:"#FFA500"
+        }        
+            tileAttribute ("device.trackDescription", key: "SECONDARY_CONTROL") {
+                attributeState "trackDescription", label:'${currentValue}'
+            }
 
-		main "main"
-		details (["currentSong", "previous", "main", "next", "fillerTile", "stop", "fillerTile", "levelSliderControl","fillerTile", "scanNewClients"])
-	}
+            tileAttribute ("device.level", key: "SLIDER_CONTROL") {
+                attributeState "level", action: "setVolumeLevel"
+            }
+        }
+        
+        standardTile("next", "device.status", width: 2, height: 2, decoration: "flat") {
+        	state "next", label:'', action:"music Player.nextTrack", icon:"st.sonos.next-btn", backgroundColor:"#ffffff"
+        }
+        
+        standardTile("previous", "device.status", width: 2, height: 2, decoration: "flat") {
+        	state "previous", label:'', action:"music Player.previousTrack", icon:"st.sonos.previous-btn", backgroundColor:"#ffffff"
+        }	
+        
+        standardTile("fillerTile", "device.status", width: 5, height: 1, decoration: "flat") {
+        	state "default", label:'', action:"", icon:"", backgroundColor:"#ffffff"
+        }
+        
+        standardTile("stop", "device.status", width: 2, height: 2, decoration: "flat") {
+            state "default", label:'', action:"music Player.stop", icon:"st.sonos.stop-btn", backgroundColor:"#ffffff"
+            state "grouped", label:'', action:"music Player.stop", icon:"st.sonos.stop-btn", backgroundColor:"#ffffff"
+        }
+        
+        standardTile("scanNewClients", "device.status", width: 5, height: 1, decoration: "flat") {
+            state "default", label:'Scan New Clients', action:"scanNewClients", icon:"state.icon", backgroundColor:"#ffffff"
+            state "grouped", label:'', action:"scanNewClients", icon:"state.icon", backgroundColor:"#ffffff"
+        }
+        
+        main "status"
+        details (["status", "previous", "stop", "next", "currentSong"])
+    }
 }
 
 // parse events into attributes
