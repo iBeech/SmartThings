@@ -46,7 +46,7 @@ def initialize() {
     subscribe(location, null, response, [filterEvents:false])    
    	getAuthenticationToken();
     getClients();   
-    getClients();
+    //getClients();
     state.poll = true;
     regularPolling();
 }
@@ -86,14 +86,14 @@ def response(evt) {
     	
     	def mediaContainer = new XmlSlurper().parseText(msg.body)
                 
-        log.debug "Parsing /clients"
+        /*log.debug "Parsing /clients"
         mediaContainer.Server.each { thing ->        	
             log.trace "Name: " + thing.@name.text()
             log.trace "IP: " + thing.@address.text()
             log.trace "Identifier: " + thing.@machineIdentifier.text()
 
             updatePHT(thing.@name.text(), thing.@address.text(), thing.@machineIdentifier.text())
-        }
+        }*/
         
         log.debug "Parsing /status/sessions"
         getChildDevices().each { pht ->
@@ -118,12 +118,17 @@ def response(evt) {
                         
             pht.setPlaybackState(playbackState);
             
+            log.trace "Current playback type:" + currentPlayback.@type.text()
             switch(currentPlayback.@type.text()) {
             	case "movie":
                 	pht.setPlaybackTitle(currentPlayback.@title.text());
                 	break;
                     
-                default:
+                case "":
+                	pht.setPlaybackTitle("...");
+                	break;
+                    
+                case "episode":
                 	pht.setPlaybackTitle(currentPlayback.@grandparentTitle.text() + ": " + currentPlayback.@title.text());
             }
          }
@@ -213,9 +218,12 @@ def switchChange(evt) {
         
         case "play":
         case "pause":
-        case "stop":
-            // Toggle the play / pause button for this PHT
-    		playpause(phtIP);
+        	// Toggle the play / pause button for this PHT
+        	playpause(phtIP);
+        	break;
+            
+        case "stop":            
+    		stop(phtIP);
         break;
         
         case "scanNewClients":
@@ -252,7 +260,43 @@ def getClients() {
 
 	log.debug "Executing 'getClients'"
     
-    executeRequest("/clients", "GET");
+    //executeRequest("/clients", "GET");
+    
+    def params = [
+		uri: "https://plex.tv/devices.xml",
+		contentType: 'application/xml',
+		headers: [
+			  'X-Plex-Token': state.authenticationToken
+		]
+	]
+	
+    httpGet(params) { resp ->
+    
+    	        // get the contentType of the response
+        log.debug "response contentType: ${resp.contentType}"
+
+        // get the status code of the response
+        log.debug "response status code: ${resp.status}"
+                
+        log.debug "Parsing plex.tv/devices.xml"
+        def devices = resp.data.Device//.find { d -> d.@provides.text().tokenize(',').contains("player") };
+        
+        devices.each { thing ->    
+        	thing.@provides.text().tokenize(',').each { provider ->
+            	if(provider == "player") {
+                	
+                    thing.Connection.each { con ->
+                    	def uri = con.@uri.text()
+                        def address = uri.substring(uri.lastIndexOf('/') + 1, uri.lastIndexOf(":"))
+                        
+                        log.trace "Name: " + thing.@name.text() + " | Identifier: " + thing.@clientIdentifier.text() + " | Provides: " + thing.@provides.text() + " | Address: " + address	
+                    	updatePHT(thing.@name.text(), address, thing.@clientIdentifier.text())
+                    }
+                }
+            }
+            
+        }
+    }
 }
 
 def updateClientStatus(){
@@ -265,6 +309,12 @@ def playpause(phtIP) {
 	log.debug "Executing 'playpause'"
 	
 	executeRequest("/system/players/" + phtIP + "/playback/play", "GET");
+}
+
+def stop(phtIP) {
+	log.debug "Executing 'stop'"
+	
+	executeRequest("/system/players/" + phtIP + "/playback/stop", "GET");
 }
 
 def next(phtIP) {
