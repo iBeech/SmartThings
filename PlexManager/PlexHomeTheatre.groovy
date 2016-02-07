@@ -12,6 +12,17 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
+ * 
+ * 	=======INSTRUCTIONS======
+ 	1) For UK go to: https://graph-eu01-euwest1.api.smartthings.com3
+	2) For US go to: https://graph.api.smartthings.com1
+	3) Click 'My Device Handlers'
+	4) Click 'New Device Handler' in the top right
+	5) Click the 'From Code' tab
+	6) Paste in the code from: https://github.com/iBeech/SmartThings/blob/master/PlexManager/PlexHomeTheatre.groovy
+	7) Click 'Create'
+	8) Click 'Publish -> For Me'
+ * 
  */
  
 metadata {
