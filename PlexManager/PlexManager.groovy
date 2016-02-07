@@ -23,30 +23,87 @@ definition(
     iconX2Url: "http://download.easyicon.net/png/1126483/128/",
     iconX3Url: "http://download.easyicon.net/png/1126483/128/")
 
-
 preferences {
+	page(name: "startPage")
+	page(name: "authPage")
+    page(name: "clientPage")
+}
 
-  section("Plex Media Server"){
-  		input "plexServerIP", "text", "title": "Server IP", multiple: false, required: true
-    	input "plexUserName", "text", "title": "Plex Username", multiple: false, required: true
-    	input "plexPassword", "password", "title": "Plex Password", multiple: false, required: true
-    	input "theHub", "hub", title: "On which hub?", multiple: false, required: true
-  }
+def startPage() {
+    if (state?.authenticationToken) { return clientPage() }
+    else { return authPage() }
+}
+
+/* Auth Page */
+def authPage() {
+    return dynamicPage(name: "authPage", nextPage: clientPage, install: false) {
+    	section("Plex Media Server") {
+        	input "plexUserName", "text", "title": "Plex Username", multiple: false, required: true
+    		input "plexPassword", "password", "title": "Plex Password", multiple: false, required: true
+            input "plexServerIP", "text", "title": "Server IP", multiple: false, required: true
+            input "theHub", "hub", title: "On which hub?", multiple: false, required: true
+		}
+    }
+}
+
+def clientPage() {
+	if (!state.authenticationToken) { getAuthenticationToken() }
+    
+	def showUninstall = state.appInstalled
+    def devs = getClientList()
+    //log.debug "devs: ${devs}"
+	return dynamicPage(name: "clientPage", uninstall: true, install: true) {
+		section("Client Selection Page") {
+			input "selectedClients", "enum", title: "Select Your Clients...", options: devs, multiple: true, required: true, submitOnChange: true
+            href "authPage", title:"Go Back to Auth Page", description: "Tap to edit..."
+  		}
+    }
+}
+
+def clientListOpt() {
+	getClientList().collect{[(it.key): it.value]}
+}
+
+def getClientList() {
+	def devs = []
+	log.debug "Executing 'getClientList'"
+    
+    def params = [
+		uri: "https://plex.tv/devices.xml",
+		contentType: 'application/xml',
+		headers: [
+			  'X-Plex-Token': state.authenticationToken
+		]
+	]
+    httpGet(params) { resp ->
+        log.debug "Parsing plex.tv/devices.xml"
+        def devices = resp.data.Device
+        devices.each { thing ->    
+        	thing.@provides.text().tokenize(',').each { provider ->
+            	if(provider == "player") {                
+                	thing.Connection.each { con ->
+                        def uri = con.@uri.text()
+                        def address = uri.substring(uri.lastIndexOf('/') + 1, uri.lastIndexOf(":"))                                               
+                		devs << ["${thing.@name.text()}|${thing.@clientIdentifier.text()}|${address}":"${thing.@name.text()}"]
+                	}
+                }
+            }
+        }
+    }
+    return devs.sort()
 }
 
 def installed() {
-	
+	state.appInstalled = true
 	log.debug "Installed with settings: ${settings}"
-	initialize()
-    
+	initialize()   
 }
 
 def initialize() {
 
     subscribe(location, null, response, [filterEvents:false])    
-   	getAuthenticationToken();
+   	//getAuthenticationToken();
     getClients();   
-    //getClients();
     state.poll = true;
     regularPolling();
 }
@@ -54,12 +111,28 @@ def initialize() {
 def updated() {
 	log.debug "Updated with settings: ${settings}"
 
-    state.authenticationToken = null;
-    state.tokenUserName = null;
-    state.poll = false;
+	unsubscribe();
+
+    if(selectedClients) {
     
-    getAuthenticationToken();
-    getClients();
+        selectedClients.each { client ->
+            def item = client.tokenize('|')
+            def name = item[0]
+            def address = item[1]
+            def uniqueIdentifier = item[2]
+            
+            updatePHT(name, address, uniqueIdentifier);
+        }
+    }
+
+    //state.authenticationToken = null;
+    //state.tokenUserName = null;
+    state.poll = false;
+    //getClients();
+    
+    if (!state.authenticationToken) {
+    	getAuthenticationToken()
+    }
     
     if(!state.poll){
     	state.poll = true;
@@ -68,15 +141,19 @@ def updated() {
 }
 
 def uninstalled() {
-
+	//unsubscribe()
 	state.poll = false;
-	unsubscribe();
-    
-	def delete = getChildDevices()
-    unsubscribe();    
-	delete.each {
-		deleteChildDevice(it.deviceNetworkId)
-	}   
+    //removeChildDevices(getChildDevices())
+}
+
+private removeChildDevices(delete) {
+	try {
+    	delete.each {
+        	deleteChildDevice(it.deviceNetworkId)
+            log.info "Successfully Removed Child Device: ${it.displayName} (${it.deviceNetworkId})"
+    		}
+   		}
+    catch (e) { log.error "There was an error (${e}) when trying to delete the child device" }
 }
 
 def response(evt) {	 
@@ -138,6 +215,8 @@ def response(evt) {
 
 def updatePHT(phtName, phtIP, phtIdentifier){
 
+    if(phtName && phtIP && phtIdentifier) { 
+    
 	log.info "Updating PHT: " + phtName + " with IP: " + phtIP + " and machine identifier: " + phtIdentifier
 
 	def children = getChildDevices()
@@ -159,6 +238,7 @@ def updatePHT(phtName, phtIP, phtIdentifier){
     
     // Renew the subscription
     subscribe(pht, "switch", switchChange)
+    }
 }
 
 def String childDeviceID(phtIP, identifier) {
@@ -272,7 +352,7 @@ def getClients() {
 	
     httpGet(params) { resp ->
     
-    	        // get the contentType of the response
+    	// get the contentType of the response
         log.debug "response contentType: ${resp.contentType}"
 
         // get the status code of the response
@@ -282,19 +362,21 @@ def getClients() {
         def devices = resp.data.Device//.find { d -> d.@provides.text().tokenize(',').contains("player") };
         
         devices.each { thing ->    
-        	thing.@provides.text().tokenize(',').each { provider ->
-            	if(provider == "player") {
-                	
-                    thing.Connection.each { con ->
-                    	def uri = con.@uri.text()
-                        def address = uri.substring(uri.lastIndexOf('/') + 1, uri.lastIndexOf(":"))
+        	selectedClients.each { clnt ->
+            	if(clnt.contains(thing.@clientIdentifier.text())) {
+        			thing.@provides.text().tokenize(',').each { provider ->
+            			if(provider == "player") {
+                    		thing.Connection.each { con ->
+                    			def uri = con.@uri.text()
+                        		def address = uri.substring(uri.lastIndexOf('/') + 1, uri.lastIndexOf(":"))
                         
-                        log.trace "Name: " + thing.@name.text() + " | Identifier: " + thing.@clientIdentifier.text() + " | Provides: " + thing.@provides.text() + " | Address: " + address	
-                    	updatePHT(thing.@name.text(), address, thing.@clientIdentifier.text())
-                    }
+                        		//log.trace "Name: " + thing.@name.text() + " | Identifier: " + thing.@clientIdentifier.text() + " | Provides: " + thing.@provides.text() + " | Address: " + address	
+                    			updatePHT(thing.@name.text(), address, thing.@clientIdentifier.text())
+                    		}
+                    	}    
+                	}
                 }
             }
-            
         }
     }
 }
@@ -379,8 +461,6 @@ def getAuthenticationToken() {
 		log.debug "Hit Exception $e on $params"
 	}
 }
-
-
 
 /* Helper functions to get the network device ID */
 private String NetworkDeviceId(){
