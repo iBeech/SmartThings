@@ -19,6 +19,8 @@ metadata {
 		capability "Switch"
         capability "Refresh"
 		capability "Polling"
+        
+        command "changeSwitchState", ["string"]
 	}
 
 	simulator {
@@ -64,8 +66,7 @@ def on() {
 	log.debug "Executing 'on'"	     
     
     sendEvent(name: "switch", value: device.deviceNetworkId + ".on");    
-    sendEvent(name: "switch", value: "on");
-    lastState = "on";
+    sendEvent(name: "switch", value: "on");    
 }
 
 def off() {
@@ -73,4 +74,17 @@ def off() {
 	    
 	sendEvent(name: "switch", value: device.deviceNetworkId + ".off");     
     sendEvent(name: "switch", value: "off");
+}
+
+def changeSwitchState(newState) {
+
+	log.trace "Received update that this switch is now $newState"
+	switch(newState) {
+    	case 1:
+			sendEvent(name: "switch", value: "on")
+            break;
+    	case 0:
+        	sendEvent(name: "switch", value: "off")
+            break;
+    }
 }
