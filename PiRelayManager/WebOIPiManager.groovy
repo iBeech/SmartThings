@@ -1,5 +1,5 @@
 /**
- *  Pi Relay Manager
+ *  WebOIPi Manager
  *
  *  Copyright 2016 iBeech
  *
@@ -12,9 +12,19 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
+ * 	==== INSTRUCTIONS ===
+	1) For UK go to: https://graph-eu01-euwest1.api.smartthings.com
+	2) For US go to: https://graph.api.smartthings.com
+	3) Click 'My SmartApps'
+	4) Click the 'From Code' tab
+	5) Paste in the code from here, into SmartThings
+	6) Click 'Create'
+	7) Click 'Publish -> For Me'
+
+ * 
  */
 definition(
-    name: "Pi Relay Manager",
+    name: "WebOIPi Manager",
     namespace: "ibeech",
     author: "ibeech",
     description: "Add each Pi Relay as an individual thing.",
