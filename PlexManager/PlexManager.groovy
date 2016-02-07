@@ -12,6 +12,16 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
+ * 
+ * 	===========INSTRUCTIONS===========
+	1) For UK go to: https://graph-eu01-euwest1.api.smartthings.com3
+	2) For US go to: https://graph.api.smartthings.com1
+	3) Click 'My SmartApps'
+	4) Click the 'From Code' tab
+	5) Paste in the code from: https://github.com/iBeech/SmartThings/blob/master/PlexManager/PlexManager.groovy
+	6) Click 'Create'
+	7) Click 'Publish -> For Me'
+ * 
  */
 definition(
     name: "Plex Manager",
