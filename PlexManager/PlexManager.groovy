@@ -101,9 +101,6 @@ def installed() {
 
 def initialize() {
 
-    subscribe(location, null, response, [filterEvents:false])    
-   	//getAuthenticationToken();
-    getClients();   
     state.poll = true;
     regularPolling();
 }
@@ -137,7 +134,9 @@ def updated() {
     if(!state.poll){
     	state.poll = true;
     	regularPolling();
-    } 
+    }
+    
+    subscribe(location, null, response, [filterEvents:false])   
 }
 
 def uninstalled() {
@@ -157,23 +156,18 @@ private removeChildDevices(delete) {
 }
 
 def response(evt) {	 
+
+log.trace "in response(evt)";
     
     def msg = parseLanMessage(evt.description);
     if(msg && msg.body && msg.body.startsWith("<?xml")){
     	
     	def mediaContainer = new XmlSlurper().parseText(msg.body)
-                
-        /*log.debug "Parsing /clients"
-        mediaContainer.Server.each { thing ->        	
-            log.trace "Name: " + thing.@name.text()
-            log.trace "IP: " + thing.@address.text()
-            log.trace "Identifier: " + thing.@machineIdentifier.text()
-
-            updatePHT(thing.@name.text(), thing.@address.text(), thing.@machineIdentifier.text())
-        }*/
-        
+                        
         log.debug "Parsing /status/sessions"
         getChildDevices().each { pht ->
+        
+        	log.debug "Checking $pht for updates"
          
          	// Convert the devices full network id to just the IP address of the device
         	//def address = getPHTAddress(pht.deviceNetworkId);
@@ -191,7 +185,7 @@ def response(evt) {
             	playbackState = currentPlayback.Player.@state.text();
             }            
                         
-            log.trace "Determined that PHT " + identifier + " playback state is: " + playbackState
+            log.trace "Determined that $pht is: " + playbackState
                         
             pht.setPlaybackState(playbackState);
             
@@ -217,53 +211,67 @@ def updatePHT(phtName, phtIP, phtIdentifier){
 
     if(phtName && phtIP && phtIdentifier) { 
     
-	log.info "Updating PHT: " + phtName + " with IP: " + phtIP + " and machine identifier: " + phtIdentifier
+        log.info "Updating PHT: " + phtName + " with IP: " + phtIP + " and machine identifier: " + phtIdentifier
 
-	def children = getChildDevices()
-    def child_deviceNetworkID = childDeviceID(phtIP, phtIdentifier);
-    
-  	def pht = children.find{ d -> d.deviceNetworkId.contains(phtIP) }  
-    
-    if(!pht){ // The PHT does not exist, create it
+        def children = getChildDevices()
+        def child_deviceNetworkID = childDeviceID(phtIP, phtIdentifier);
 
-        log.debug "This PHT does not exist, creating a new one now"
-		pht = addChildDevice("ibeech", "Plex Home Theatre", child_deviceNetworkID, theHub.id, [label:phtName, name:phtName])		
-    } else {
-    	// Update the network device ID
-        if(pht.deviceNetworkId != child_deviceNetworkID) {
-        	log.trace "Updating this devices network ID, so that it is consistant"
-    		pht.deviceNetworkId = childDeviceID(phtIP, phtIdentifier);
+        def pht = children.find{ d -> d.deviceNetworkId.contains(phtIP) }  
+
+        if(!pht){ 
+            // The PHT does not exist, create it
+            log.debug "This PHT does not exist, creating a new one now"
+            pht = addChildDevice("ibeech", "Plex Home Theatre", child_deviceNetworkID, theHub.id, [label:phtName, name:phtName])		
+        } else {
+
+            // Update the network device ID
+            if(pht.deviceNetworkId != child_deviceNetworkID) {
+                log.trace "Updating this devices network ID, so that it is consistant"
+                pht.deviceNetworkId = childDeviceID(phtIP, phtIdentifier);
+            }
         }
-    }
-    
-    // Renew the subscription
-    subscribe(pht, "switch", switchChange)
+
+        // Renew the subscription
+        subscribe(pht, "switch", switchChange)
     }
 }
 
 def String childDeviceID(phtIP, identifier) {
 
 	def id = "pht." + settings.plexServerIP + "." + phtIP + "." + identifier
+    //log.trace "childDeviceID: $id";
     return id;
 }
 def String getPHTAddress(deviceNetworkId) {
 
 	def parts = deviceNetworkId.tokenize('.');
-	return parts[5] + "." + parts[6] + "." + parts[7] + "." + parts[8];
+	def part = parts[6] + "." + parts[7] + "." + parts[8] + "." + parts[9];
+    //log.trace "PHTAddress: $part"
+    
+    return part;
 }
 def String getPHTIdentifier(deviceNetworkId) {
 
 	def parts = deviceNetworkId.tokenize('.');
-	return parts[9];
+    def part = parts[5];    
+    //log.trace "PHTIdentifier: $part"
+    
+	return part;
 }
 def String getPHTCommand(deviceNetworkId) {
-
+	
 	def parts = deviceNetworkId.tokenize('.');
-	return parts[10];
+    def part = parts[10];
+    //log.trace "PHTCommand: $part"
+    
+	return part
 }
 def String getPHTAttribute(deviceNetworkId) {
 
 	def parts = deviceNetworkId.tokenize('.');
+    def part = parts[11];
+    //log.trace "PHTAttribute: $part"
+    
 	return parts[11];
 }
 
@@ -283,16 +291,16 @@ def switchChange(evt) {
     def command = getPHTCommand(evt.value);
     
     //log.debug "phtIP: " + phtIP
-    log.debug "Command: " + command
+    log.debug "Command: $command"
     
     switch(command) {
     	case "next":
-        	log.debug "Sending command 'next' to " + phtIP
+        	log.debug "Sending command 'next' to $phtIP"
             next(phtIP);
         break;
         
         case "previous":
-        	log.debug "Sending command 'previous' to " + phtIP
+        	log.debug "Sending command 'previous' to $phtIP"
             previous(phtIP);
         break;
         
@@ -310,7 +318,7 @@ def switchChange(evt) {
         	getClients();
             
         case "setVolume":
-        	setVolume(phtIP, parts[11]);
+        	setVolume(phtIP, getPHTAttribute(evt.value));
         break;
     }
     
@@ -320,7 +328,7 @@ def switchChange(evt) {
 def setVolume(phtIP, level) {
 	log.debug "Executing 'setVolume'"
 	
-	executeRequest("/system/players/" + phtIP + "/playback/setParameters?volume=" + level, "GET");
+	executeRequest("/system/players/$phtIP/playback/setParameters?volume=$level", "GET");
 }
 
 def regularPolling() { 
@@ -336,7 +344,7 @@ def regularPolling() {
     runIn(10, regularPolling);
 }
 
-def getClients() {
+/*def getClients() {
 
 	log.debug "Executing 'getClients'"
     
@@ -379,7 +387,7 @@ def getClients() {
             }
         }
     }
-}
+}*/
 
 def updateClientStatus(){
 	log.debug "Executing 'updateClientStatus'"
