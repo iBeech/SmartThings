@@ -183,7 +183,7 @@ def updateVirtualRelay(deviceName, deviceType, deviceConfig) {
         theDevice.name = deviceName
         
         if(deviceType == "switch") { // Actions specific for the relay device type
-            subscribe(theSwitch, "switch", switchChange)
+            subscribe(theDevice, "switch", switchChange)
             log.debug "Setting initial state of $deviceName to off"
             setDeviceState(deviceConfig, "off");
             theDevice.off();
