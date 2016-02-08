@@ -23,6 +23,7 @@
 	7) Click 'Publish -> For Me'
  * 
  */
+ 
 definition(
     name: "Plex Manager",
     namespace: "ibeech",
@@ -97,6 +98,10 @@ def getClientList() {
                 		devs << ["${thing.@name.text()}|${thing.@clientIdentifier.text()}|${address}":"${thing.@name.text()}"]
                 	}
                 }
+            }
+            
+            if(thing.@device.text() == "Xbox One") {
+            	devs << ["${thing.@name.text()}|${thing.@clientIdentifier.text()}|0.0.0.0":"${thing.@name.text()}"]
             }
         }
     }
@@ -353,51 +358,6 @@ def regularPolling() {
     
     runIn(10, regularPolling);
 }
-
-/*def getClients() {
-
-	log.debug "Executing 'getClients'"
-    
-    //executeRequest("/clients", "GET");
-    
-    def params = [
-		uri: "https://plex.tv/devices.xml",
-		contentType: 'application/xml',
-		headers: [
-			  'X-Plex-Token': state.authenticationToken
-		]
-	]
-	
-    httpGet(params) { resp ->
-    
-    	// get the contentType of the response
-        log.debug "response contentType: ${resp.contentType}"
-
-        // get the status code of the response
-        log.debug "response status code: ${resp.status}"
-                
-        log.debug "Parsing plex.tv/devices.xml"
-        def devices = resp.data.Device//.find { d -> d.@provides.text().tokenize(',').contains("player") };
-        
-        devices.each { thing ->    
-        	selectedClients.each { clnt ->
-            	if(clnt.contains(thing.@clientIdentifier.text())) {
-        			thing.@provides.text().tokenize(',').each { provider ->
-            			if(provider == "player") {
-                    		thing.Connection.each { con ->
-                    			def uri = con.@uri.text()
-                        		def address = uri.substring(uri.lastIndexOf('/') + 1, uri.lastIndexOf(":"))
-                        
-                        		//log.trace "Name: " + thing.@name.text() + " | Identifier: " + thing.@clientIdentifier.text() + " | Provides: " + thing.@provides.text() + " | Address: " + address	
-                    			updatePHT(thing.@name.text(), address, thing.@clientIdentifier.text())
-                    		}
-                    	}    
-                	}
-                }
-            }
-        }
-    }
-}*/
 
 def updateClientStatus(){
 	log.debug "Executing 'updateClientStatus'"
