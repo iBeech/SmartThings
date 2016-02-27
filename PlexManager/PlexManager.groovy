@@ -94,7 +94,7 @@ def getClientList() {
             	if(provider == "player") {                
                 	thing.Connection.each { con ->
                         def uri = con.@uri.text()
-                        def address = uri.substring(uri.lastIndexOf('/') + 1, uri.lastIndexOf(":"))                                               
+                        def address = (uri =~ 'https?://([^:]+)')[0][1]                                           
                 		devs << ["${thing.@name.text()}|${thing.@clientIdentifier.text()}|${address}":"${thing.@name.text()}"]
                 	}
                 }
