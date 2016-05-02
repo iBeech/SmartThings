@@ -183,3 +183,7 @@ def setPlaybackIcon(iconUrl) {
     
     log.debug "Icon set to " + state.icon
 }
+
+def playbackType(type) {
+state.playbackType = type;
+}

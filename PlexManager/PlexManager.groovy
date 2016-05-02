@@ -209,6 +209,7 @@ log.trace "in response(evt)";
             pht.setPlaybackState(playbackState);
             
             log.trace "Current playback type:" + currentPlayback.@type.text()
+            pht.playbackType(currentPlayback.@type.text())
             switch(currentPlayback.@type.text()) {
             	case "movie":
                 	pht.setPlaybackTitle(currentPlayback.@title.text());
@@ -217,6 +218,10 @@ log.trace "in response(evt)";
                 case "":
                 	pht.setPlaybackTitle("...");
                 	break;
+                
+                case "clip":
+                	pht.setPlaybackTitle("Trailer");
+                	break;  
                     
                 case "episode":
                 	pht.setPlaybackTitle(currentPlayback.@grandparentTitle.text() + ": " + currentPlayback.@title.text());
