@@ -185,5 +185,5 @@ def setPlaybackIcon(iconUrl) {
 }
 
 def playbackType(type) {
-state.playbackType = type;
+	sendEvent(name: "playbackType", value: type);
 }
