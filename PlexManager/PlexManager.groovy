@@ -28,7 +28,7 @@ definition(
     name: "Plex Manager",
     namespace: "ibeech",
     author: "ibeech",
-    description: "Add and Plex Home Theatre endpoints",
+    description: "Add and Manage Plex Home Theatre endpoints",
     category: "Safety & Security",
     iconUrl: "http://download.easyicon.net/png/1126483/64/",
     iconX2Url: "http://download.easyicon.net/png/1126483/128/",
@@ -65,7 +65,7 @@ def clientPage() {
     //log.debug "devs: ${devs}"
 	return dynamicPage(name: "clientPage", uninstall: true, install: true) {
 		section("Client Selection Page") {
-			input "selectedClients", "enum", title: "Select Your Clients...", options: devs, multiple: true, required: true, submitOnChange: true
+			input "selectedClients", "enum", title: "Select Your Clients...", options: devs, multiple: true, required: false, submitOnChange: true
             href "authPage", title:"Go Back to Auth Page", description: "Tap to edit..."
   		}
     }
@@ -102,6 +102,10 @@ def getClientList() {
             
             if(thing.@device.text() == "Xbox One") {
             	devs << ["${thing.@name.text()}|${thing.@clientIdentifier.text()}|0.0.0.0":"${thing.@name.text()}"]
+            }
+            
+            if(thing.@provides.text() == "client") {
+            	devs << ["${thing.@device.text()}|${thing.@clientIdentifier.text()}|0.0.0.0":"${thing.@device.text()}"]
             }
         }
     }
@@ -205,6 +209,7 @@ log.trace "in response(evt)";
             pht.setPlaybackState(playbackState);
             
             log.trace "Current playback type:" + currentPlayback.@type.text()
+            pht.playbackType(currentPlayback.@type.text())
             switch(currentPlayback.@type.text()) {
             	case "movie":
                 	pht.setPlaybackTitle(currentPlayback.@title.text());
@@ -213,6 +218,10 @@ log.trace "in response(evt)";
                 case "":
                 	pht.setPlaybackTitle("...");
                 	break;
+                
+                case "clip":
+                	pht.setPlaybackTitle("Trailer");
+                	break;  
                     
                 case "episode":
                 	pht.setPlaybackTitle(currentPlayback.@grandparentTitle.text() + ": " + currentPlayback.@title.text());
