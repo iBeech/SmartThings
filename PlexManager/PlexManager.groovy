@@ -65,6 +65,7 @@ def clientPage() {
     //log.debug "devs: ${devs}"
 	return dynamicPage(name: "clientPage", uninstall: true, install: true) {
 		section("Client Selection Page") {
+        	paragraph("Devices with [status] on the end only provide status reporting and not control of the Plex Client via the ST App")
 			input "selectedClients", "enum", title: "Select Your Clients...", options: devs, multiple: true, required: false, submitOnChange: true
             href "authPage", title:"Go Back to Auth Page", description: "Tap to edit..."
   		}
@@ -101,11 +102,11 @@ def getClientList() {
             }
             
             if(thing.@device.text() == "Xbox One") {
-            	devs << ["${thing.@name.text()}|${thing.@clientIdentifier.text()}|0.0.0.0":"${thing.@name.text()}"]
+            	devs << ["${thing.@name.text()}[status]|${thing.@clientIdentifier.text()}|0.0.0.0":"${thing.@name.text()}[status]"]
             }
             
             if(thing.@provides.text() == "client") {
-            	devs << ["${thing.@device.text()}|${thing.@clientIdentifier.text()}|0.0.0.0":"${thing.@device.text()}"]
+            	devs << ["${thing.@device.text()}[status]|${thing.@clientIdentifier.text()}|0.0.0.0":"${thing.@device.text()}[status]"]
             }
         }
     }
@@ -127,7 +128,7 @@ def initialize() {
 def updated() {
 	log.debug "Updated with settings: ${settings}"
 
-	unsubscribe();
+	unsubscribe()
 
     if(selectedClients) {
     
