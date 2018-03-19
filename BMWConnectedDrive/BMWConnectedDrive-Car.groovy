@@ -2,6 +2,27 @@
  *  BMW ConnectedDrive Car
  *
  *  Copyright 2018 Tom Beech
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ *  in compliance with the License. You may obtain a copy of the License at:
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
+ *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+ *  for the specific language governing permissions and limitations under the License.
+ *
+ * 
+ * 	=======INSTRUCTIONS======
+ 	1) For UK go to: https://graph-eu01-euwest1.api.smartthings.com3
+	2) For US go to: https://graph.api.smartthings.com1
+	3) Click 'My Device Handlers'
+	4) Click 'New Device Handler' in the top right
+	5) Click the 'From Code' tab
+	6) Paste in the code from: 
+	7) Click 'Create'
+	8) Click 'Publish -> For Me'
+ * 
  */
  
 metadata {
@@ -25,9 +46,13 @@ metadata {
         
     	tiles {
 
-            carouselTile("carImage", "device.image", action: "Image Capture.take", width: 6, height: 2) { }
+            carouselTile("carImage", "device.image", action: "Image Capture.take", width: 3, height: 2) { }
 			     
-           	valueTile("carDetails", "device.carDetails", width: 6, height: 2) {
+           	valueTile("carDetails", "device.carDetails", width: 3, height: 2) {
+        		  state "val", label:'${currentValue}', defaultState: true
+    		}
+            
+            valueTile("carService", "device.carService", width: 6, height: 2) {
         		  state "val", label:'${currentValue}', defaultState: true
     		}
             
@@ -52,25 +77,41 @@ metadata {
 			}
 
             main "startVentalationButton"
-            details([ "image", "carImage", "carDetails", "lockCar", "unlockCar", "flashLightButton", "startVentalationButton", "refresh"])
+            details([ "carImage", "carDetails", "carService", "lockCar", "unlockCar", "flashLightButton", "startVentalationButton", "refresh"])
         }        
     }
 }
 
 def refresh() {
+
 	def serviceInfo = parent.getCarServicenfo(device.deviceNetworkId)
         
     def string = device.displayName;
-    string += "\r\nMileage: ${serviceInfo.attributesMap.mileage} ${serviceInfo.attributesMap.unitOfLength}"
-  
+    string += "\r\rMiles: ${serviceInfo.attributesMap.mileage} ${serviceInfo.attributesMap.unitOfLength}"    
+	sendEvent(name: "carDetails", value: string);    
+    
+    string = "Location: ${getCarLocation(serviceInfo.attributesMap.gps_lat, serviceInfo.attributesMap.gps_lng)}"
     serviceInfo.vehicleMessages.cbsMessages.each{msg -> 
         def info1 = formatServiceInfo(msg);
         if(info1 != "") string += "\r\n${info1}";
     }
-    
-	sendEvent(name: "carDetails", value: string);    
+    sendEvent(name: "carService", value: string);    
     
     captureCarImage()
+}
+
+def getCarLocation(lat, lon) {
+
+	def params = [
+		uri: "https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lon}&key=AIzaSyD-nz_0qxBlvGj0WZjpbHfnA-rQG4anMtM"
+	]	
+    log.debug params
+    
+    httpGet(params) {response ->    
+        log.debug "${response.data}"
+        
+		return response.data.results.formatted_address[0]
+	}
 }
 
 def formatServiceInfo(msg){
