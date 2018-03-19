@@ -172,7 +172,7 @@ def initialize() {
         state.cars.each { car ->
         
          	def childDevice = getChildDevice(car.vin);
-            def carName = "${car.brand} ${car.basicType} ${car.bodyType}"
+            def carName = "${car.brand} ${car.basicType} ${wagonToTouring(car.bodyType)}"
             
          	if (!childDevice) {
 				log.debug "Found new car: ${carName}. VIN: ${car.vin}"
@@ -189,6 +189,14 @@ def initialize() {
             }
         }
   	}
+}
+
+def wagonToTouring(input) {
+	if(input == "Sports Wagon") {
+    	return "Msport Touring"
+    } else {
+    	return input
+    }    
 }
 
 def generateNotification(msg) {
